@@ -127,13 +127,49 @@ static void test_parse_string() {
     TEST_STRING("\xF0\x9D\x84\x9E", "\"\\ud834\\udd1e\"");  /* G clef sign U+1D11E */
 }
 
+#define TEST_ARRAY(v, json, size)\
+    do {\
+        lept_free(&v);\
+        EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, json));\
+        EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));\
+        EXPECT_EQ_SIZE_T(size, lept_get_array_size(&v));\
+    } while(0)
+
 static void test_parse_array() {
     lept_value v;
+    lept_value v2;
 
     lept_init(&v);
-    EXPECT_EQ_INT(LEPT_PARSE_OK, lept_parse(&v, "[ ]"));
-    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v));
-    EXPECT_EQ_SIZE_T(0, lept_get_array_size(&v));
+    TEST_ARRAY(v, "[ ]", 0);
+
+    TEST_ARRAY(v, "[ null , false, true, 123, \"abc\" ]", 5);
+    EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v.u.a.e[0]));
+    EXPECT_FALSE(lept_get_type(&v.u.a.e[1]));
+    EXPECT_TRUE(lept_get_type(&v.u.a.e[2]));
+    EXPECT_EQ_DOUBLE(123, lept_get_number(&v.u.a.e[3]));
+    EXPECT_EQ_STRING("abc", lept_get_string(&v.u.a.e[4]), lept_get_string_length(&v.u.a.e[4]));
+
+    TEST_ARRAY(v, "[ [ ] , [ 0 ], [ 0 , 1 ], [ 0 , 1 , 2 ] ]", 4);
+    EXPECT_EQ_INT(LEPT_NULL, lept_get_type(&v.u.a.e[0]));
+    v2 = v.u.a.e[1];
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v2));
+    EXPECT_EQ_SIZE_T(1, lept_get_array_size(&v2));
+    EXPECT_EQ_DOUBLE(0, v2.u.a.e[0].u.n);
+    lept_init(&v2);
+    v2 = v.u.a.e[2];
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v2));
+    EXPECT_EQ_SIZE_T(2, lept_get_array_size(&v2));
+    EXPECT_EQ_DOUBLE(0, v2.u.a.e[0].u.n);
+    EXPECT_EQ_DOUBLE(1, v2.u.a.e[1].u.n);
+    lept_init(&v2);
+    v2 = v.u.a.e[3];
+    EXPECT_EQ_INT(LEPT_ARRAY, lept_get_type(&v2));
+    EXPECT_EQ_SIZE_T(3, lept_get_array_size(&v2));
+    EXPECT_EQ_DOUBLE(0, v2.u.a.e[0].u.n);
+    EXPECT_EQ_DOUBLE(1, v2.u.a.e[1].u.n);
+    EXPECT_EQ_DOUBLE(2, v2.u.a.e[2].u.n);
+
+    lept_free(&v2);
     lept_free(&v);
 }
 
